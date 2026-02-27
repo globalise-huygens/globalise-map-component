@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "d3": "7.9.0",
+    "topojson-client": "^3.1.0",
+    "versor": "^0.2.0"
+  },
+  "devDependencies": {
+    "@types/d3": "^7.4.3",
+    "@types/topojson-client": "^3.1.5",
+    "esbuild": "0.27.3"
+  },
+  "scripts": {
+    "build": "./node_modules/.bin/esbuild src/* --define:DEV=false  --bundle --outdir=./static/ --loader:.html=copy",
+    "dev": "./node_modules/.bin/esbuild src/* --define:DEV=true --bundle --watch --outdir=./static/ --servedir=./static --loader:.html=copy",
+    "format": "prettier --write \"src/**/*.{ts,js,json,css,html}\""
+  }
+}
