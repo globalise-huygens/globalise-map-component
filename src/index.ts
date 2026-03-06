@@ -2,16 +2,24 @@
 import versor from "versor";
 import {feature} from "topojson-client";
 import {FeatureCollection, Feature, Point} from "geojson";
+import {zoom} from "d3-zoom";
 import {D3DragEvent, drag} from "d3-drag";
 import {select, pointer, pointers} from "d3-selection";
 import {geoPath, geoOrthographic, GeoSphere} from "d3-geo";
 
 import places from "../data/places.json" with {type: "json"};
-import world from "../data/land-110m.json" with {type: "json"};
+import land110m from "../data/land-110m.json" with {type: "json"};
+import land50m from "../data/land-50m.json" with {type: "json"};
 
 type DragEvent = D3DragEvent<HTMLCanvasElement, unknown, unknown>;
 
-function render() {
+const renderLowScale = () => render(false);
+const renderAutoScale = () => render(true);
+
+function render(useAutoScale: boolean) {
+    const land = useAutoScale ? determineLandScale() : ftLand110m;
+    popover.style.display = "none";
+
     context.clearRect(0, 0, width, height);
 
     context.beginPath();
@@ -32,6 +40,11 @@ function render() {
     path(placesGeoJSON);
     context.fillStyle = "grey";
     context.fill();
+}
+
+function determineLandScale() {
+    const scaleFactor = projection.scale() / scale;
+    return scaleFactor < 2 ? ftLand110m : ftLand50m;
 }
 
 function handleDrag() {
@@ -139,7 +152,9 @@ const placesGeoJSON: FeatureCollection = {
 };
 
 // @ts-ignore
-const land = feature(world, world.objects.land);
+const ftLand110m = feature(land110m, land110m.objects.land);
+// @ts-ignore
+const ftLand50m = feature(land50m, land50m.objects.land);
 
 const popover = document.getElementById('popover') as HTMLDivElement;
 const canvas = document.getElementById('map') as HTMLCanvasElement;
@@ -154,11 +169,19 @@ const sphere = {type: "Sphere"} as GeoSphere;
 const projection = geoOrthographic()
     .fitExtent([[1, 1], [width - 1, height - 1]], sphere)
     .rotate([-110, 0]);
+const scale = projection.scale();
 const path = geoPath(projection, context).pointRadius(5);
 
 select(canvas)
-    .call(handleDrag().on("drag.render", render))
-    .call(render)
+    .call(handleDrag()
+        .on("drag.render", renderLowScale)
+        .on("end.render", renderAutoScale))
+    .call(zoom<HTMLCanvasElement, unknown>()
+        .scaleExtent([1, 8])
+        .on("zoom", e => projection.scale(scale * e.transform.k))
+        .on("zoom.render", renderLowScale)
+        .on("end.render", renderAutoScale))
+    .call(renderAutoScale)
     .node();
 
 canvas.addEventListener("mousemove", handleHover);
