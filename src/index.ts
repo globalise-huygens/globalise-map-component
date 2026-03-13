@@ -1,7 +1,9 @@
 // @ts-ignore
 import versor from "versor";
 import {feature} from "topojson-client";
-import {FeatureCollection, Feature, Point} from "geojson";
+import {Topology, GeometryCollection} from "topojson-specification";
+import {Feature, Point} from "geojson";
+import {featureCollection, lineStrings, point} from "@turf/turf";
 import {zoom} from "d3-zoom";
 import {D3DragEvent, drag} from "d3-drag";
 import {select, pointer, pointers} from "d3-selection";
@@ -43,6 +45,13 @@ function render(useAutoScale: boolean) {
     path(placesGeoJSON);
     context.fillStyle = "grey";
     context.fill();
+
+    context.beginPath();
+    path(journeys);
+    context.lineWidth = 3;
+    context.strokeStyle = "grey";
+    context.setLineDash([5, 3]);
+    context.stroke();
 
     if (activePlace) {
         context.beginPath();
@@ -154,28 +163,18 @@ function rotateTo([lon, lat]: [number, number]) {
 
 let activePlace: Feature | null = null;
 
-const placesGeoJSON: FeatureCollection = {
-    type: "FeatureCollection",
-    features: places.filter(place => place.geometry).map(place => {
-        const {geometry, ...properties} = place;
+const placesGeoJSON = featureCollection(places.filter(place => place.geometry).map(place => {
+    const {geometry, ...properties} = place;
 
-        const match = geometry!.match(/^POINT\s*\(\s*(-?\d+(\.\d+)?)\s+(-?\d+(\.\d+)?)\s*\)$/i);
-        if (!match)
-            throw new Error(`Invalid WKT: ${geometry}`);
+    const match = geometry!.match(/^POINT\s*\(\s*(-?\d+(\.\d+)?)\s+(-?\d+(\.\d+)?)\s*\)$/i);
+    if (!match)
+        throw new Error(`Invalid WKT: ${geometry}`);
 
-        const lon = parseFloat(match[1]);
-        const lat = parseFloat(match[3]);
+    const lon = parseFloat(match[1]);
+    const lat = parseFloat(match[3]);
 
-        return {
-            type: "Feature",
-            geometry: {
-                type: "Point",
-                coordinates: [lon, lat],
-            },
-            properties
-        };
-    })
-};
+    return point([lon, lat], properties);
+}));
 
 const listContainer = document.getElementById('list-container') as HTMLDivElement;
 for (const place of placesGeoJSON.features) {
@@ -208,14 +207,22 @@ for (const place of placesGeoJSON.features) {
             otherCard.classList.remove('active');
         }
         card.classList.add('active');
-        rotateTo(place.geometry.coordinates);
+        rotateTo(place.geometry.coordinates as [number, number]);
     });
 }
 
-// @ts-ignore
-const ftLand110m = feature(land110m, land110m.objects.land);
-// @ts-ignore
-const ftLand50m = feature(land50m, land50m.objects.land);
+const ftLand110m = feature(land110m as unknown as Topology, land110m.objects.land as unknown as GeometryCollection);
+const ftLand50m = feature(land50m as unknown as Topology, land50m.objects.land as unknown as GeometryCollection);
+
+const journeys = lineStrings(Array.from({length: 10}, _ => {
+    const fromFt = placesGeoJSON.features[Math.floor(Math.random() * placesGeoJSON.features.length)];
+    const toFt = placesGeoJSON.features[Math.floor(Math.random() * placesGeoJSON.features.length)];
+
+    const from = fromFt.geometry.coordinates;
+    const to = toFt.geometry.coordinates;
+
+    return [from, to];
+}));
 
 const popover = document.getElementById('popover') as HTMLDivElement;
 const canvas = document.getElementById('map') as HTMLCanvasElement;
