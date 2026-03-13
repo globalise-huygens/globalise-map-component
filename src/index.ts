@@ -6,6 +6,8 @@ import {zoom} from "d3-zoom";
 import {D3DragEvent, drag} from "d3-drag";
 import {select, pointer, pointers} from "d3-selection";
 import {geoPath, geoOrthographic, GeoSphere} from "d3-geo";
+import {transition} from "d3-transition";
+import {interpolate} from "d3-interpolate";
 
 import places from "../data/places.json" with {type: "json"};
 import land110m from "../data/land-110m.json" with {type: "json"};
@@ -20,7 +22,7 @@ function render(useAutoScale: boolean) {
     const land = useAutoScale ? determineLandScale() : ftLand110m;
     popover.style.display = "none";
 
-    context.clearRect(0, 0, width, height);
+    context.reset();
 
     context.beginPath();
     path(sphere);
@@ -34,12 +36,22 @@ function render(useAutoScale: boolean) {
 
     context.beginPath();
     path(sphere);
+    context.strokeStyle = "black";
     context.stroke();
 
     context.beginPath();
     path(placesGeoJSON);
     context.fillStyle = "grey";
     context.fill();
+
+    if (activePlace) {
+        context.beginPath();
+        path(activePlace);
+        context.fillStyle = "yellow";
+        context.strokeStyle = "black";
+        context.fill();
+        context.stroke();
+    }
 }
 
 function determineLandScale() {
@@ -128,6 +140,20 @@ function handleHover(e: MouseEvent) {
     }
 }
 
+function rotateTo([lon, lat]: [number, number]) {
+    transition()
+        .duration(1000)
+        .tween("rotate", () => {
+            const r = interpolate(projection.rotate(), [-lon, -lat]);
+            return t => {
+                projection.rotate(r(t) as [number, number] | [number, number, number]);
+                renderLowScale();
+            };
+        });
+}
+
+let activePlace: Feature | null = null;
+
 const placesGeoJSON: FeatureCollection = {
     type: "FeatureCollection",
     features: places.filter(place => place.geometry).map(place => {
@@ -150,6 +176,41 @@ const placesGeoJSON: FeatureCollection = {
         };
     })
 };
+
+const listContainer = document.getElementById('list-container') as HTMLDivElement;
+for (const place of placesGeoJSON.features) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    listContainer.appendChild(card);
+
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = place.properties!._label;
+    card.appendChild(label);
+
+    if (place.properties!.alternative_labels.length > 0) {
+        const altLabels = document.createElement('div');
+        altLabels.className = 'alt-labels';
+
+        for (const alternativeLabel of place.properties!.alternative_labels) {
+            const altLabel = document.createElement('span');
+            altLabel.className = 'alt-label';
+            altLabel.textContent = alternativeLabel;
+            altLabels.appendChild(altLabel);
+        }
+
+        card.appendChild(altLabels);
+    }
+
+    card.addEventListener('click', _ => {
+        activePlace = place;
+        for (const otherCard of document.getElementsByClassName('card')) {
+            otherCard.classList.remove('active');
+        }
+        card.classList.add('active');
+        rotateTo(place.geometry.coordinates);
+    });
+}
 
 // @ts-ignore
 const ftLand110m = feature(land110m, land110m.objects.land);

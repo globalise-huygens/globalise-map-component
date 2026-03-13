@@ -2,14 +2,29 @@
 <head>
     <style>
         body {
+            margin: 0;
             font-family: sans-serif;
         }
 
         #container {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            margin: 2rem;
+        }
+
+        #list-container {
+            display: flex;
+            flex-direction: column;
+            width: 30vw;
+            height: calc(100vh - 4rem);
+            overflow-y: scroll;
+        }
+
+        #geo-container {
             position: relative;
             display: block;
-            margin: 0 auto;
-            width: 40%;
+            width: 40vw;
         }
 
         #map {
@@ -24,12 +39,47 @@
             background-color: lightgray;
             border-radius: 0.5em;
         }
+
+        .card {
+            border: 1px solid grey;
+            border-radius: 1rem;
+            padding: 0.8rem;
+            margin: 0.5rem;
+            cursor: pointer;
+        }
+
+        .card.active {
+            background-color: lightgray;
+        }
+
+        .label {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .alt-labels {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .alt-label {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.4rem;
+            background: lightblue;
+        }
     </style>
 </head>
 <body>
 <div id="container">
-    <canvas id="map"></canvas>
-    <div id="popover" style="display: none;"></div>
+    <div id="list-container"></div>
+
+    <div id="geo-container">
+        <canvas id="map"></canvas>
+        <div id="popover" style="display: none;"></div>
+    </div>
 </div>
 <script src="index.js"></script>
 </body>
