@@ -2,8 +2,8 @@
 import versor from "versor";
 import {feature} from "topojson-client";
 import {Topology, GeometryCollection} from "topojson-specification";
-import {Feature, Point} from "geojson";
-import {featureCollection, lineStrings, point} from "@turf/turf";
+import {Feature, Point, LineString} from "geojson";
+import {featureCollection, point, bezierSpline} from "@turf/turf";
 import {zoom} from "d3-zoom";
 import {D3DragEvent, drag} from "d3-drag";
 import {select, pointer, pointers} from "d3-selection";
@@ -12,6 +12,7 @@ import {transition} from "d3-transition";
 import {interpolate} from "d3-interpolate";
 
 import places from "../data/places.json" with {type: "json"};
+import voyages from "../data/voyages.json" with {type: "json"};
 import land110m from "../data/land-110m.json" with {type: "json"};
 import land50m from "../data/land-50m.json" with {type: "json"};
 
@@ -46,12 +47,14 @@ function render(useAutoScale: boolean) {
     context.fillStyle = "grey";
     context.fill();
 
-    context.beginPath();
-    path(journeys);
-    context.lineWidth = 3;
-    context.strokeStyle = "grey";
-    context.setLineDash([5, 3]);
-    context.stroke();
+    if (activeVoyage) {
+        context.beginPath();
+        path(bezierSpline(activeVoyage));
+        context.lineWidth = 3;
+        context.strokeStyle = "grey";
+        context.setLineDash([5, 3]);
+        context.stroke();
+    }
 
     if (activePlace) {
         context.beginPath();
@@ -161,7 +164,8 @@ function rotateTo([lon, lat]: [number, number]) {
         });
 }
 
-let activePlace: Feature | null = null;
+let activePlace: Feature<Point> | null = null;
+let activeVoyage: Feature<LineString> | null = null;
 
 const placesGeoJSON = featureCollection(places.filter(place => place.geometry).map(place => {
     const {geometry, ...properties} = place;
@@ -176,11 +180,11 @@ const placesGeoJSON = featureCollection(places.filter(place => place.geometry).m
     return point([lon, lat], properties);
 }));
 
-const listContainer = document.getElementById('list-container') as HTMLDivElement;
+const placesContainer = document.getElementById('places-container') as HTMLDivElement;
 for (const place of placesGeoJSON.features) {
     const card = document.createElement('div');
     card.className = 'card';
-    listContainer.appendChild(card);
+    placesContainer.appendChild(card);
 
     const label = document.createElement('div');
     label.className = 'label';
@@ -203,7 +207,7 @@ for (const place of placesGeoJSON.features) {
 
     card.addEventListener('click', _ => {
         activePlace = place;
-        for (const otherCard of document.getElementsByClassName('card')) {
+        for (const otherCard of placesContainer.getElementsByClassName('card')) {
             otherCard.classList.remove('active');
         }
         card.classList.add('active');
@@ -211,18 +215,30 @@ for (const place of placesGeoJSON.features) {
     });
 }
 
+const voyagesContainer = document.getElementById('voyages-container') as HTMLDivElement;
+for (const voyage of voyages.features) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    voyagesContainer.appendChild(card);
+
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = `${voyage.properties.from} ↔ ${voyage.properties.to}`;
+    card.appendChild(label);
+
+    card.addEventListener('click', _ => {
+        activeVoyage = voyage as Feature<LineString>;
+        for (const otherCard of voyagesContainer.getElementsByClassName('card')) {
+            otherCard.classList.remove('active');
+        }
+        card.classList.add('active');
+        rotateTo(voyage.geometry.coordinates[0] as [number, number]);
+    });
+}
+
+
 const ftLand110m = feature(land110m as unknown as Topology, land110m.objects.land as unknown as GeometryCollection);
 const ftLand50m = feature(land50m as unknown as Topology, land50m.objects.land as unknown as GeometryCollection);
-
-const journeys = lineStrings(Array.from({length: 10}, _ => {
-    const fromFt = placesGeoJSON.features[Math.floor(Math.random() * placesGeoJSON.features.length)];
-    const toFt = placesGeoJSON.features[Math.floor(Math.random() * placesGeoJSON.features.length)];
-
-    const from = fromFt.geometry.coordinates;
-    const to = toFt.geometry.coordinates;
-
-    return [from, to];
-}));
 
 const popover = document.getElementById('popover') as HTMLDivElement;
 const canvas = document.getElementById('map') as HTMLCanvasElement;

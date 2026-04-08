@@ -1,0 +1,7 @@
+[project]
+name = "scripts"
+version = "0.1.0"
+requires-python = ">=3.14.3"
+dependencies = [
+    "searoute>=1.5.0",
+]

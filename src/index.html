@@ -6,6 +6,10 @@
             font-family: sans-serif;
         }
 
+        h2 {
+            margin: 0.5rem 0;
+        }
+
         #container {
             display: flex;
             flex-direction: row;
@@ -13,12 +17,24 @@
             margin: 2rem;
         }
 
-        #list-container {
+        #lists-container {
             display: flex;
             flex-direction: column;
             width: 30vw;
-            height: calc(100vh - 4rem);
+        }
+
+        #voyages-container {
+            display: flex;
+            flex-direction: column;
             overflow-y: scroll;
+            height: calc(40vh - 8rem);
+        }
+
+        #places-container {
+            display: flex;
+            flex-direction: column;
+            overflow-y: scroll;
+            height: calc(60vh - 8rem);
         }
 
         #geo-container {
@@ -74,7 +90,17 @@
 </head>
 <body>
 <div id="container">
-    <div id="list-container"></div>
+    <div id="lists-container">
+        <div id="voyages">
+            <h2>Voyages</h2>
+            <div id="voyages-container"></div>
+        </div>
+
+        <div id="places">
+            <h2>Places</h2>
+            <div id="places-container"></div>
+        </div>
+    </div>
 
     <div id="geo-container">
         <canvas id="map"></canvas>
