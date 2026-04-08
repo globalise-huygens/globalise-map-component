@@ -154,7 +154,7 @@ function handleHover(e: MouseEvent) {
 
 function rotateTo([lon, lat]: [number, number]) {
     transition()
-        .duration(1000)
+        .duration(1000 * (projection.scale() / scale))
         .tween("rotate", () => {
             const r = interpolate(projection.rotate(), [-lon, -lat]);
             return t => {
