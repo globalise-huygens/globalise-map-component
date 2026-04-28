@@ -10,6 +10,10 @@
             margin: 0.5rem 0;
         }
 
+        label {
+            margin: 0.5rem 0;
+        }
+
         #container {
             display: flex;
             flex-direction: row;
@@ -91,6 +95,11 @@
 <body>
 <div id="container">
     <div id="lists-container">
+        <label>
+            <input type="checkbox" id="voyages-style">
+            Enable curved voyages (basic shipping paths)
+        </label>
+
         <div id="voyages">
             <h2>Voyages</h2>
             <div id="voyages-container"></div>

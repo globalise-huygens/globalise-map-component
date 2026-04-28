@@ -3,7 +3,7 @@ import versor from "versor";
 import {feature} from "topojson-client";
 import {Topology, GeometryCollection} from "topojson-specification";
 import {Feature, Point, LineString} from "geojson";
-import {featureCollection, point, bezierSpline} from "@turf/turf";
+import {featureCollection, point, bezierSpline, lineString} from "@turf/turf";
 import {zoom} from "d3-zoom";
 import {D3DragEvent, drag} from "d3-drag";
 import {select, pointer, pointers} from "d3-selection";
@@ -47,9 +47,9 @@ function render(useAutoScale: boolean) {
     context.fillStyle = "grey";
     context.fill();
 
-    if (activeVoyage) {
+    if (activeVoyageMapping) {
         context.beginPath();
-        path(bezierSpline(activeVoyage));
+        path(bezierSpline(activeVoyageMapping));
         context.lineWidth = 3;
         context.strokeStyle = "grey";
         context.setLineDash([5, 3]);
@@ -166,6 +166,7 @@ function rotateTo([lon, lat]: [number, number]) {
 
 let activePlace: Feature<Point> | null = null;
 let activeVoyage: Feature<LineString> | null = null;
+let activeVoyageMapping: Feature<LineString> | null = null;
 
 const placesGeoJSON = featureCollection(places.filter(place => place.geometry).map(place => {
     const {geometry, ...properties} = place;
@@ -215,6 +216,19 @@ for (const place of placesGeoJSON.features) {
     });
 }
 
+const voyagesStyle = document.getElementById('voyages-style') as HTMLInputElement;
+voyagesStyle.addEventListener('change', _ => {
+    if (voyagesStyle.checked) {
+        activeVoyageMapping = activeVoyage;
+    } else if (activeVoyage) {
+        activeVoyageMapping = lineString(
+            [activeVoyage.geometry.coordinates[0], activeVoyage.geometry.coordinates.reverse()[0]],
+            activeVoyage.properties
+        );
+    }
+    renderAutoScale();
+});
+
 const voyagesContainer = document.getElementById('voyages-container') as HTMLDivElement;
 for (const voyage of voyages.features) {
     const card = document.createElement('div');
@@ -228,6 +242,14 @@ for (const voyage of voyages.features) {
 
     card.addEventListener('click', _ => {
         activeVoyage = voyage as Feature<LineString>;
+        activeVoyageMapping = voyage as Feature<LineString>;
+        if (!voyagesStyle.checked) {
+            activeVoyageMapping = lineString(
+                [voyage.geometry.coordinates[0], voyage.geometry.coordinates.reverse()[0]],
+                voyage.properties
+            );
+        }
+
         for (const otherCard of voyagesContainer.getElementsByClassName('card')) {
             otherCard.classList.remove('active');
         }
